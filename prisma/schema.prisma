@@ -1,0 +1,186 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  username      String    @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  profile       Profile?
+  links         Link[]
+  analytics     Analytics[]
+  themes        UserTheme[]
+  plan          Plan      @default(FREE)
+  
+  @@index([username])
+  @@index([email])
+}
+
+enum Plan {
+  FREE
+  PRO
+  BUSINESS
+}
+
+model Profile {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName   String?
+  bio           String?
+  avatar        String?
+  coverImage    String?
+  seoTitle      String?
+  seoDescription String?
+  ogImage       String?
+  themeId       String?
+  theme         Theme?    @relation(fields: [themeId], references: [id])
+  customColors  Json?
+  socialLinks   Json?
+  isPublic      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Link {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  url           String
+  description   String?
+  thumbnail     String?
+  mediaType     MediaType @default(NONE)
+  mediaUrl      String?
+  isActive      Boolean   @default(true)
+  isPinned      Boolean   @default(false)
+  position      Int       @default(0)
+  publishAt     DateTime?
+  expireAt      DateTime?
+  clickCount    Int       @default(0)
+  buttonStyle   ButtonStyle @default(ROUNDED)
+  icon          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  analytics     Analytics[]
+  
+  @@index([userId, position])
+  @@index([userId, isActive])
+}
+
+enum MediaType {
+  NONE
+  IMAGE
+  VIDEO
+  YOUTUBE
+}
+
+enum ButtonStyle {
+  FLAT
+  ROUNDED
+  PILL
+  OUTLINE
+  SHADOW
+  GLASSMORPHISM
+}
+
+model Theme {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  slug          String    @unique
+  description   String?
+  preview       String?
+  category      ThemeCategory @default(MINIMAL)
+  config        Json
+  isPremium     Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  sortOrder     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  profiles      Profile[]
+  userThemes    UserTheme[]
+}
+
+enum ThemeCategory {
+  MINIMAL
+  BOLD
+  GRADIENT
+  DARK
+  COLORFUL
+  PROFESSIONAL
+  FESTIVE
+}
+
+model UserTheme {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  themeId       String
+  theme         Theme     @relation(fields: [themeId], references: [id])
+  customColors  Json?
+  unlockedAt    DateTime  @default(now())
+  
+  @@unique([userId, themeId])
+}
+
+model Analytics {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkId        String?
+  link          Link?     @relation(fields: [linkId], references: [id], onDelete: SetNull)
+  event         EventType
+  ipAddress     String?
+  userAgent     String?
+  country       String?
+  city          String?
+  referrer      String?
+  deviceType    String?
+  browser       String?
+  createdAt     DateTime  @default(now())
+  
+  @@index([userId, createdAt])
+  @@index([linkId, createdAt])
+  @@index([userId, event])
+}
+
+enum EventType {
+  PAGE_VIEW
+  LINK_CLICK
+  PROFILE_VIEW
+}
+
+model Template {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  preview       String?
+  category      String?
+  config        Json
+  isPremium     Boolean   @default(false)
+  price         Float?
+  isPublished   Boolean   @default(false)
+  usageCount    Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tags          String[]
+}
+
+model ClickDaily {
+  id            String    @id @default(cuid())
+  userId        String
+  linkId        String?
+  date          DateTime
+  count         Int       @default(0)
+  
+  @@unique([userId, linkId, date])
+  @@index([userId, date])
+}
